@@ -102,7 +102,7 @@ async function loadLibrary(reset = false) {
       if (folder.trashed || folder.mimeType !== 'application/vnd.google-apps.folder') throw new Error('FOLDER_ID must point to an existing, publicly shared folder.');
       state.files = []; state.token = ''; state.ready = true; $('library-title').textContent = folder.name;
     }
-    const params = { q:`'${CONFIG.FOLDER_ID}' in parents and trashed = false`, fields:'nextPageToken,files(id,name,mimeType,size)', pageSize:'100', orderBy:'name', spaces:'drive' };
+    const params = { q:`'${CONFIG.FOLDER_ID}' in parents and trashed = false`, fields:'nextPageToken,files(id,name,mimeType,size,resourceKey)', pageSize:'100', orderBy:'name', spaces:'drive' };
     if (state.token) params.pageToken = state.token;
     const page = await request('files',params);
     const seen = new Set(state.files.map(f => f.id)); state.files.push(...(page.files || []).filter(f => isAudio(f) && !seen.has(f.id)));
@@ -119,14 +119,16 @@ async function select(index, remember = true) {
   if (index < 0 || index >= state.queue.length) return;
   if (remember && state.position >= 0) state.history.push(state.position);
   const generation = ++state.generation; audio.pause(); audio.removeAttribute('src'); audio.load(); state.position = index; state.failed = false;
-  const file = state.queue[index]; $('current').textContent = file.name; $('player-status').textContent = 'Checking file and loading audio…'; $('drive-link').href = `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`; $('drive-link').hidden = false; renderLibrary(); renderQueue(); updateTime();
+  const file = state.queue[index]; $('current').textContent = file.name; $('player-status').textContent = 'Checking file and loading audio…'; const driveLink = new URL(`https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`); if (file.resourceKey) driveLink.searchParams.set('resourcekey',file.resourceKey); $('drive-link').href = driveLink.href; $('drive-link').hidden = false; renderLibrary(); renderQueue(); updateTime();
   try {
-    const metadata = await request(`files/${encodeURIComponent(file.id)}`, { fields:'id,parents,trashed,capabilities(canDownload)' });
+    const metadata = await request(`files/${encodeURIComponent(file.id)}`, { fields:'id,parents,trashed,resourceKey,capabilities(canDownload)', ...(file.resourceKey ? { resourceKey:file.resourceKey } : {}) });
     if (generation !== state.generation) return;
     if (metadata.trashed || !(metadata.parents || []).includes(CONFIG.FOLDER_ID)) throw new Error('This song was removed from the configured folder. Refresh the library.');
     if (metadata.capabilities?.canDownload === false) throw new Error('The owner has disabled downloads. Ask the owner to allow downloading this public audio file.');
     // Native audio cannot set a request header; the documented key query parameter is used here.
-    audio.src = apiURL(`files/${encodeURIComponent(file.id)}`, { alt:'media', key:CONFIG.API_KEY }).href;
+    const mediaParams = { alt:'media', key:CONFIG.API_KEY };
+    if (metadata.resourceKey || file.resourceKey) mediaParams.resourceKey = metadata.resourceKey || file.resourceKey;
+    audio.src = apiURL(`files/${encodeURIComponent(file.id)}`, mediaParams).href;
     await resume();
   } catch (e) { if (generation === state.generation) { state.failed = true; $('player-status').textContent = `${e.message} Open the Drive link to check access, then retry Play.`; } }
 }
@@ -137,7 +139,9 @@ async function playbackFailure() {
   $('player-status').textContent = message + ' Open the Drive link to check the file, then retry Play.';
   // Probe only the first byte for a useful HTTP error. Cancel successful bodies; never buffer the song.
   try {
-    const response = await fetch(apiURL(`files/${encodeURIComponent(file.id)}`,{alt:'media'}), { headers:{'X-Goog-Api-Key':CONFIG.API_KEY, Range:'bytes=0-0'}, credentials:'omit', signal:AbortSignal.timeout(10000) });
+    const probeParams = { alt:'media' };
+    if (file.resourceKey) probeParams.resourceKey = file.resourceKey;
+    const response = await fetch(apiURL(`files/${encodeURIComponent(file.id)}`,probeParams), { headers:{'X-Goog-Api-Key':CONFIG.API_KEY, Range:'bytes=0-0'}, credentials:'omit', signal:AbortSignal.timeout(10000) });
     if (!response.ok) message = apiError(response.status,await response.json().catch(() => ({})));
     else if (response.body) await response.body.cancel();
   } catch { /* Keep the actionable native playback error above. */ }
