@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Folder Radio · Your music, in one place</title>
+<style>
+:root{color-scheme:dark;--bg:#111313;--panel:#1a1e1c;--line:#303832;--text:#f2f4eb;--muted:#b1bcb3;--green:#c7f58a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}button,input,select{font:inherit}button,a,input,select{touch-action:manipulation}button,select{border:1px solid var(--line);border-radius:9px;background:#252d27;color:var(--text);padding:10px 15px}button{cursor:pointer}button:hover{border-color:var(--green)}button:disabled{opacity:.4;cursor:default}button[aria-pressed=true],.primary{background:var(--green);color:#172110}a{color:var(--green)}:focus-visible{outline:3px solid var(--green);outline-offset:4px}input[type=range]{accent-color:var(--green);width:100%;min-height:30px}input[type=search]{background:var(--bg);color:var(--text);border:1px solid var(--line);padding:12px;border-radius:9px;width:100%}.wrap{max-width:1250px;margin:auto;padding:32px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:22px}.brand{font-weight:750;font-size:22px;letter-spacing:-1px}.badge,.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--muted)}h1{font-size:clamp(32px,5vw,56px);letter-spacing:-2px;margin:35px 0 5px;line-height:1.1}p{color:var(--muted)}.layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:28px;margin-top:32px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;min-width:0}h2{font-size:20px;margin:0 0 18px}.tools{display:flex;gap:12px;align-items:end;margin-bottom:20px}.tools label:first-child{flex:1}label{display:block;font-size:13px;color:var(--muted)}label input,label select{margin-top:6px}.status{padding:14px 16px;background:#232c24;border-radius:10px;margin:15px 0;color:var(--text)}.status.error{background:#422b29;color:#ffe1da}.songs,.queue{list-style:none;margin:0;padding:0}.song{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.song.active{color:var(--green)}.number{color:var(--muted);font-size:12px;min-width:24px}.song-info{flex:1;min-width:0}.name{overflow-wrap:anywhere;font-weight:550}.size{font-size:12px;color:var(--muted)}.song button{padding:8px 11px;flex-shrink:0}.art{aspect-ratio:1;border-radius:12px;display:grid;place-items:center;background:repeating-radial-gradient(circle at center,#283e2b 0 3px,#1c2b1f 4px 8px);margin-bottom:24px;position:relative;overflow:hidden}.art:after{content:'♪';display:grid;place-items:center;font-size:85px;color:#152010;background:var(--green);border-radius:50%;width:42%;height:42%;box-shadow:0 0 65px #c7f58a22}.art.playing:after{animation:pulse 2s infinite alternate}@keyframes pulse{to{box-shadow:0 0 80px #c7f58a66}}@media(prefers-reduced-motion:reduce){.art.playing:after{animation:none}}#current{font-size:22px;letter-spacing:-.5px;margin:8px 0;overflow-wrap:anywhere}.times{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}.transport{display:flex;justify-content:center;gap:12px;margin:18px 0}.modes{display:flex;gap:10px;justify-content:center;margin-bottom:20px}.modes button{font-size:13px}.volume{display:flex;gap:15px;align-items:center}.volume label{white-space:nowrap}#player-status{font-size:13px;overflow-wrap:anywhere}#drive-link{display:inline-block;margin-top:10px}.queue{max-height:300px;overflow:auto;margin-top:10px}.queue li{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:10px 0;font-size:13px}.queue li button:first-child{flex:1;text-align:left;overflow-wrap:anywhere;background:transparent;border:0;padding:4px}.queue .current{color:var(--green)}.queue li button:last-child{padding:5px 9px}details{margin:28px 0;color:var(--muted);border-top:1px solid var(--line);padding-top:20px}summary{cursor:pointer;color:var(--text)}footer{font-size:12px;color:var(--muted);margin:30px 0}#more{margin-top:20px}small{color:var(--muted)}[hidden]{display:none!important}@media(max-width:850px){.layout{grid-template-columns:minmax(0,1fr)}aside{grid-row:1}.art{width:140px;float:left;margin:0 20px 15px 0}.art:after{font-size:45px}.player-body{display:flow-root}.transport{clear:both}.wrap{padding:20px}.badge{letter-spacing:1px;font-size:10px}}@media(max-width:450px){.panel{padding:16px}.tools{flex-wrap:wrap}.tools label:first-child{flex-basis:100%}.song{gap:8px}.number{display:none}.song button{padding:8px}.art{width:100px}.brand{font-size:19px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="brand">◉ Folder Radio</div><span class="badge">Google Drive / Public library</span></header>
+<main>
+<h1>Your folder. Your soundtrack.</h1><p>A little space to press play and tune in.</p>
+<div class="layout">
+<section class="panel" aria-labelledby="library-title">
+<div class="eyebrow">The collection</div><h2 id="library-title">Music library</h2>
+<div class="tools"><label>Search loaded songs<input id="search" type="search" placeholder="Find a filename…"></label><label>Sort by filename<select id="sort"><option value="asc">A → Z</option><option value="desc">Z → A</option></select></label><button id="reload">Refresh</button></div>
+<div id="library-status" class="status" role="status" aria-live="polite"></div>
+<small id="count"></small><ol id="songs" class="songs" aria-label="Songs"></ol>
+<button id="more" hidden>Load more</button>
+<p><small>Only this folder’s direct audio files. Search and sort cover loaded songs. Load more to include additional files.</small></p>
+</section>
+<aside class="panel" aria-label="Music player">
+<div class="player-body"><div id="art" class="art" aria-hidden="true"></div><div class="eyebrow">Now playing</div><h2 id="current">Choose your first song</h2><div id="player-status" role="status" aria-live="polite">Select a song from the library.</div></div>
+<audio id="audio" preload="metadata"></audio>
+<a id="drive-link" target="_blank" rel="noopener noreferrer" hidden>Open this file in Google Drive ↗</a>
+<label for="seek">Playback position</label><input id="seek" type="range" min="0" max="100" value="0" step="0.1" disabled><div class="times"><span id="elapsed">0:00</span><span id="duration">0:00</span></div>
+<div class="transport"><button id="previous" aria-label="Previous song" disabled>⏮</button><button id="play" class="primary" disabled>Play</button><button id="next" aria-label="Next song" disabled>⏭</button></div>
+<div class="modes"><button id="shuffle" aria-pressed="false">Shuffle</button><button id="repeat" aria-label="Repeat mode: off">Repeat: off</button></div>
+<div class="volume"><label for="volume">Volume</label><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></div><small id="volume-note"></small>
+<h2 style="margin-top:28px">Play queue <small id="queue-count"></small></h2><small>Playing a library song starts its queue. Use + to append songs.</small><ol id="queue" class="queue" aria-label="Play queue"></ol>
+</aside>
+</div>
+<details><summary>Setup & playback help</summary><p>Set <code>API_KEY</code> and <code>FOLDER_ID</code> at the top of this page’s script. Enable Google Drive API v3 in Google Cloud, create an API key restricted to this website’s HTTP referrers and the Google Drive API, and share the folder and songs as “Anyone with the link — Viewer.” See README.md for full instructions.</p><p>Playback uses the documented Drive API media endpoint. If a song fails, open its Drive link, check public sharing and download permission, or upload an MP3/AAC version supported by your browser. Drive download quotas and organization sharing policies can also block playback. No sign-in is requested.</p></details>
+</main><footer>Folder Radio · Audio travels directly from Google Drive to your browser.</footer>
+</div>
+<script>
+'use strict';
+// ==================== ENTER YOUR CONFIGURATION HERE ====================
+const CONFIG = Object.freeze({
+  API_KEY: 'AlzaSyBLg_lojNv-RYq5nmvM-vWb0iQ03MTY3Bg',
+  FOLDER_ID: '1rd9jJyiZ6osPetTwij87Tqifj67j5W8'
+});
+// ======================================================================
+const $ = id => document.getElementById(id);
+const audio = $('audio');
+const state = { files: [], token: '', busy: false, ready: false, queue: [], position: -1, shuffle: false, repeat: 'off', history: [], generation: 0, failed: false };
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+const isAudio = file => (file.mimeType || '').startsWith('audio/') || (!((file.mimeType || '').startsWith('application/vnd.google-apps.')) && /\.(mp3|m4a|aac|wav|wave|ogg|oga|opus|flac|aif|aiff|wma|weba|amr)$/i.test(file.name));
+function size(bytes) { if (bytes === undefined) return 'Size unavailable'; const n = Number(bytes); if (!Number.isFinite(n)) return 'Size unavailable'; return n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`; }
+function time(value) { if (!Number.isFinite(value) || value < 0) return '0:00'; return `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`; }
+function status(text, error = false) { $('library-status').textContent = text; $('library-status').classList.toggle('error', error); }
+function apiURL(path, params = {}) { const url = new URL(`https://www.googleapis.com/drive/v3/${path}`); Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v)); return url; }
+function apiError(code, body) {
+  const detail = body?.error || {}; const reasons = (detail.errors || []).map(e => e.reason).join(' ') + ' ' + (detail.message || '');
+  if (/quota|rateLimit|dailyLimit|downloadQuota/i.test(reasons) || code === 429) return 'Google Drive quota or rate limit reached. Wait and try again, or check your project’s Drive API quotas.';
+  if (/key|referer|referrer|accessNotConfigured|SERVICE_DISABLED|API_KEY/i.test(reasons)) return 'API key rejected. Check the key, enable Google Drive API, and allow this website’s exact domain in the key restrictions.';
+  if (code === 404) return 'Folder or file not found, deleted, or not publicly accessible. Check its ID and “Anyone with the link” sharing.';
+  if (code === 401 || code === 403) return 'Access denied. Check public sharing and download permission, API key restrictions, and organization sharing policies.';
+  if (code === 400) return 'Invalid Drive request. Check that FOLDER_ID is a folder ID, not a full URL, and refresh the library.';
+  return `Google Drive request failed (${code}). Try again later.`;
+}
+async function request(path, params) {
+  let response;
+  try { response = await fetch(apiURL(path, params), { headers: { 'X-Goog-Api-Key': CONFIG.API_KEY }, credentials: 'omit', signal: AbortSignal.timeout(20000) }); }
+  catch { throw new Error('Could not reach Google Drive. Check your connection, browser network restrictions, and try again.'); }
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(apiError(response.status, body));
+  return body;
+}
+function visibleFiles() { const term = $('search').value.toLocaleLowerCase(); return state.files.filter(f => f.name.toLocaleLowerCase().includes(term)).sort((a,b) => ($('sort').value === 'asc' ? 1 : -1) * collator.compare(a.name,b.name)); }
+function button(text, label, action) { const b = document.createElement('button'); b.textContent = text; b.setAttribute('aria-label',label); b.addEventListener('click',action); return b; }
+function renderLibrary() {
+  const files = visibleFiles(); $('songs').replaceChildren();
+  $('count').textContent = `${files.length} shown / ${state.files.length} audio files loaded${state.token ? ' · More files available' : ''}`;
+  files.forEach((file,index) => {
+    const row = document.createElement('li'); row.className = 'song'; row.classList.toggle('active',state.queue[state.position]?.id === file.id);
+    const num = document.createElement('span'); num.className = 'number'; num.textContent = String(index + 1).padStart(2,'0');
+    const info = document.createElement('div'); info.className = 'song-info';
+    const name = document.createElement('div'); name.className = 'name'; name.textContent = file.name;
+    const meta = document.createElement('div'); meta.className = 'size'; meta.textContent = size(file.size); info.append(name,meta);
+    row.append(num,info,button('▶',`Play ${file.name}`,() => { state.queue = [...files]; state.history = []; state.position = -1; select(index); }),button('+',`Add ${file.name} to queue`,() => { state.queue.push(file); renderQueue(); $('player-status').textContent = `Added ${file.name} to queue.`; })); $('songs').append(row);
+  });
+  if (!files.length) { const li = document.createElement('li'); li.className = 'status'; li.textContent = state.files.length ? 'No loaded songs match your search.' : 'No audio files loaded.'; $('songs').append(li); }
+}
+function renderQueue() {
+  $('queue').replaceChildren(); $('queue-count').textContent = `(${state.queue.length})`;
+  state.queue.forEach((file,index) => { const li = document.createElement('li'); const b = button(`${index === state.position ? '● ' : ''}${file.name}`,`Play queued ${file.name}`,() => select(index)); b.classList.toggle('current',index === state.position); if (index === state.position) b.setAttribute('aria-current','true'); const remove = button('×',`Remove ${file.name} from queue`,() => { state.queue.splice(index,1); if (index < state.position) state.position--; state.history = []; renderQueue(); }); remove.disabled = index === state.position; li.append(b,remove); $('queue').append(li); });
+  $('previous').disabled = $('next').disabled = !state.queue.length;
+  $('play').disabled = !state.queue.length;
+}
+async function loadLibrary(reset = false) {
+  if (state.busy) return;
+  if (!CONFIG.API_KEY || CONFIG.API_KEY.startsWith('PASTE_') || !/^[\w-]+$/.test(CONFIG.FOLDER_ID) || CONFIG.FOLDER_ID.startsWith('PASTE_')) { status('Setup needed: enter your API_KEY and public FOLDER_ID in the marked configuration block in index.html.',true); return; }
+  state.busy = true; $('reload').disabled = true; $('more').disabled = true; $('songs').setAttribute('aria-busy','true'); status('Loading your folder…');
+  try {
+    if (reset || !state.ready) {
+      const folder = await request(`files/${encodeURIComponent(CONFIG.FOLDER_ID)}`, { fields:'id,name,mimeType,trashed' });
+      if (folder.trashed || folder.mimeType !== 'application/vnd.google-apps.folder') throw new Error('FOLDER_ID must point to an existing, publicly shared folder.');
+      state.files = []; state.token = ''; state.ready = true; $('library-title').textContent = folder.name;
+    }
+    const params = { q:`'${CONFIG.FOLDER_ID}' in parents and trashed = false`, fields:'nextPageToken,files(id,name,mimeType,size)', pageSize:'100', orderBy:'name', spaces:'drive' };
+    if (state.token) params.pageToken = state.token;
+    const page = await request('files',params);
+    const seen = new Set(state.files.map(f => f.id)); state.files.push(...(page.files || []).filter(f => isAudio(f) && !seen.has(f.id)));
+    state.token = page.nextPageToken || '';
+    status(state.files.length ? `Ready to listen.${state.token ? ' Load more to expand your library.' : ''}` : state.token ? 'No audio in this batch. Load more to keep checking this folder.' : 'No public audio files found. Add audio files to this folder and check their public sharing.');
+  } catch (error) { status(error.message,true); }
+  finally { state.busy = false; $('reload').disabled = false; $('more').disabled = false; $('more').hidden = !state.token; $('songs').setAttribute('aria-busy','false'); renderLibrary(); }
+}
+async function resume() {
+  try { await audio.play(); }
+  catch (e) { if (e.name === 'AbortError') return; if (e.name === 'NotAllowedError') $('player-status').textContent = 'Your browser requires a tap to start audio. Press Play.'; else playbackFailure(); }
+}
+async function select(index, remember = true) {
+  if (index < 0 || index >= state.queue.length) return;
+  if (remember && state.position >= 0) state.history.push(state.position);
+  const generation = ++state.generation; audio.pause(); audio.removeAttribute('src'); audio.load(); state.position = index; state.failed = false;
+  const file = state.queue[index]; $('current').textContent = file.name; $('player-status').textContent = 'Checking file and loading audio…'; $('drive-link').href = `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`; $('drive-link').hidden = false; renderLibrary(); renderQueue(); updateTime();
+  try {
+    const metadata = await request(`files/${encodeURIComponent(file.id)}`, { fields:'id,parents,trashed,capabilities(canDownload)' });
+    if (generation !== state.generation) return;
+    if (metadata.trashed || !(metadata.parents || []).includes(CONFIG.FOLDER_ID)) throw new Error('This song was removed from the configured folder. Refresh the library.');
+    if (metadata.capabilities?.canDownload === false) throw new Error('The owner has disabled downloads. Ask the owner to allow downloading this public audio file.');
+    // Native audio cannot set a request header; the documented key query parameter is used here.
+    audio.src = apiURL(`files/${encodeURIComponent(file.id)}`, { alt:'media', key:CONFIG.API_KEY }).href;
+    await resume();
+  } catch (e) { if (generation === state.generation) { state.failed = true; $('player-status').textContent = `${e.message} Open the Drive link to check access, then retry Play.`; } }
+}
+async function playbackFailure() {
+  if (state.failed || state.position < 0) return;
+  state.failed = true; const generation = state.generation; const file = state.queue[state.position];
+  let message = 'This file could not play. Check public access and download permission, or upload an MP3/AAC copy if this browser cannot decode its format. Drive download limits can also block playback.';
+  $('player-status').textContent = message + ' Open the Drive link to check the file, then retry Play.';
+  // Probe only the first byte for a useful HTTP error. Cancel successful bodies; never buffer the song.
+  try {
+    const response = await fetch(apiURL(`files/${encodeURIComponent(file.id)}`,{alt:'media'}), { headers:{'X-Goog-Api-Key':CONFIG.API_KEY, Range:'bytes=0-0'}, credentials:'omit', signal:AbortSignal.timeout(10000) });
+    if (!response.ok) message = apiError(response.status,await response.json().catch(() => ({})));
+    else if (response.body) await response.body.cancel();
+  } catch { /* Keep the actionable native playback error above. */ }
+  if (generation === state.generation) $('player-status').textContent = message + ' Open the Drive link to check the file, then retry Play.';
+}
+function advance(ended = false) {
+  if (!state.queue.length) return;
+  if (ended && state.repeat === 'one') { audio.currentTime = 0; resume(); return; }
+  let next = state.position + 1;
+  if (state.shuffle && state.queue.length > 1) { next = Math.floor(Math.random() * (state.queue.length - 1)); if (next >= state.position) next++; }
+  if (next >= state.queue.length) { if (state.repeat === 'all') next = 0; else { $('player-status').textContent = 'Queue finished. Choose another song or press Play to listen again.'; return; } }
+  select(next);
+}
+function updateTime() { const duration = audio.duration; $('elapsed').textContent = time(audio.currentTime); $('duration').textContent = time(duration); $('seek').disabled = !Number.isFinite(duration) || duration <= 0; $('seek').max = Number.isFinite(duration) && duration > 0 ? duration : 100; $('seek').value = Number.isFinite(audio.currentTime) ? audio.currentTime : 0; $('seek').setAttribute('aria-valuetext',`${time(audio.currentTime)} of ${time(duration)}`); }
+$('search').addEventListener('input',renderLibrary); $('sort').addEventListener('change',renderLibrary); $('reload').addEventListener('click',() => loadLibrary(true)); $('more').addEventListener('click',() => loadLibrary());
+$('play').addEventListener('click',() => { if (state.failed || !audio.getAttribute('src')) select(Math.max(0,state.position),false); else if (audio.paused) resume(); else audio.pause(); });
+$('next').addEventListener('click',() => advance()); $('previous').addEventListener('click',() => { if (audio.currentTime > 3) { audio.currentTime = 0; return; } select(state.history.length ? state.history.pop() : Math.max(0,state.position - 1),false); });
+$('shuffle').addEventListener('click',() => { state.shuffle = !state.shuffle; $('shuffle').setAttribute('aria-pressed',String(state.shuffle)); });
+$('repeat').addEventListener('click',() => { state.repeat = {off:'all',all:'one',one:'off'}[state.repeat]; $('repeat').textContent = `Repeat: ${state.repeat}`; $('repeat').setAttribute('aria-label',`Repeat mode: ${state.repeat}`); });
+$('seek').addEventListener('input',() => { if (Number.isFinite(audio.duration)) audio.currentTime = Number($('seek').value); });
+audio.volume = .8; $('volume').addEventListener('input',() => { audio.volume = Number($('volume').value); if (Math.abs(audio.volume - Number($('volume').value)) > .02) $('volume-note').textContent = 'This browser uses the device volume buttons.'; });
+audio.addEventListener('playing',() => { state.failed = false; $('play').textContent = 'Pause'; $('art').classList.add('playing'); $('player-status').textContent = 'Playing from Google Drive'; });
+audio.addEventListener('pause',() => { $('play').textContent = 'Play'; $('art').classList.remove('playing'); if (!state.failed && !audio.ended && audio.getAttribute('src')) $('player-status').textContent = 'Paused'; });
+audio.addEventListener('waiting',() => { if (!state.failed) $('player-status').textContent = 'Buffering… If this persists, check your connection or open the Drive link to verify access.'; });
+audio.addEventListener('error',playbackFailure); audio.addEventListener('ended',() => advance(true)); ['timeupdate','loadedmetadata','durationchange','emptied'].forEach(event => audio.addEventListener(event,updateTime));
+renderQueue(); loadLibrary();
+</script>
+</body>
+</html>
