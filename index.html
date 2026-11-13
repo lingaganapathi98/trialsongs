@@ -98,11 +98,11 @@ async function loadLibrary(reset = false) {
   state.busy = true; $('reload').disabled = true; $('more').disabled = true; $('songs').setAttribute('aria-busy','true'); status('Loading your folder…');
   try {
     if (reset || !state.ready) {
-      const folder = await request(`files/${encodeURIComponent(CONFIG.FOLDER_ID)}`, { fields:'id,name,mimeType,trashed' });
+        const folder = await request(`files/${encodeURIComponent(CONFIG.FOLDER_ID)}`, { fields:'id,name,mimeType,trashed', supportsAllDrives:'true' });
       if (folder.trashed || folder.mimeType !== 'application/vnd.google-apps.folder') throw new Error('FOLDER_ID must point to an existing, publicly shared folder.');
       state.files = []; state.token = ''; state.ready = true; $('library-title').textContent = folder.name;
     }
-    const params = { q:`'${CONFIG.FOLDER_ID}' in parents and trashed = false`, fields:'nextPageToken,files(id,name,mimeType,size,resourceKey)', pageSize:'100', orderBy:'name', spaces:'drive' };
+    const params = { q:`'${CONFIG.FOLDER_ID}' in parents and trashed = false`, fields:'nextPageToken,files(id,name,mimeType,size,resourceKey)', pageSize:'100', orderBy:'name', spaces:'drive', supportsAllDrives:'true', includeItemsFromAllDrives:'true' };
     if (state.token) params.pageToken = state.token;
     const page = await request('files',params);
     const seen = new Set(state.files.map(f => f.id)); state.files.push(...(page.files || []).filter(f => isAudio(f) && !seen.has(f.id)));
@@ -121,9 +121,12 @@ async function select(index, remember = true) {
   const generation = ++state.generation; audio.pause(); audio.removeAttribute('src'); audio.load(); state.position = index; state.failed = false;
   const file = state.queue[index]; $('current').textContent = file.name; $('player-status').textContent = 'Checking file and loading audio…'; const driveLink = new URL(`https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`); if (file.resourceKey) driveLink.searchParams.set('resourcekey',file.resourceKey); $('drive-link').href = driveLink.href; $('drive-link').hidden = false; renderLibrary(); renderQueue(); updateTime();
   try {
-    const metadata = await request(`files/${encodeURIComponent(file.id)}`, { fields:'id,parents,trashed,resourceKey,capabilities(canDownload)', ...(file.resourceKey ? { resourceKey:file.resourceKey } : {}) });
+    const metadata = await request(`files/${encodeURIComponent(file.id)}`, { fields:'id,parents,trashed,resourceKey,capabilities(canDownload)', supportsAllDrives:'true', ...(file.resourceKey ? { resourceKey:file.resourceKey } : {}) });
     if (generation !== state.generation) return;
-    if (metadata.trashed || !(metadata.parents || []).includes(CONFIG.FOLDER_ID)) throw new Error('This song was removed from the configured folder. Refresh the library.');
+    if (metadata.trashed) throw new Error('This song was moved to the trash. Restore it in Google Drive, then refresh the library.');
+    // Drive can omit `parents` from files.get even when files.list returned this
+    // item for the configured folder, so only reject an explicit parent mismatch.
+    if (Array.isArray(metadata.parents) && metadata.parents.length && !metadata.parents.includes(CONFIG.FOLDER_ID)) throw new Error('This song is no longer in the configured folder. Refresh the library.');
     if (metadata.capabilities?.canDownload === false) throw new Error('The owner has disabled downloads. Ask the owner to allow downloading this public audio file.');
     // Native audio cannot set a request header; the documented key query parameter is used here.
     const mediaParams = { alt:'media', key:CONFIG.API_KEY };
