@@ -1,6 +1,6 @@
 ﻿export default async function handler(request) {
-  const key = Netlify.env.get('GOOGLE_API_KEY');
-  const folder = Netlify.env.get('GOOGLE_FOLDER_ID');
+  const key = Netlify.env.get('API_KEY');
+  const folder = Netlify.env.get('FOLDER_ID');
   const error = (status, message) => Response.json({error:{message}}, {status, headers:{'Cache-Control':'no-store'}});
   if (!key || !folder || !/^[\w-]+$/.test(folder)) return error(500, 'Server configuration is missing or invalid.');
   if (request.method !== 'GET') return error(405, 'Method not allowed.');
@@ -35,3 +35,4 @@
     return new Response(upstream.body, {status:upstream.status, headers});
   } catch { return error(502, 'Unable to reach Google Drive.'); }
 }
+
