@@ -34,17 +34,11 @@
 <h2 style="margin-top:28px">Play queue <small id="queue-count"></small></h2><small>Playing a library song starts its queue. Use + to append songs.</small><ol id="queue" class="queue" aria-label="Play queue"></ol>
 </aside>
 </div>
-<details><summary>Setup & playback help</summary><p>Set <code>API_KEY</code> and <code>FOLDER_ID</code> at the top of this page’s script. Enable Google Drive API v3 in Google Cloud, create an API key restricted to this website’s HTTP referrers and the Google Drive API, and share the folder and songs as “Anyone with the link — Viewer.” See README.md for full instructions.</p><p>Playback uses the documented Drive API media endpoint. If a song fails, open its Drive link, check public sharing and download permission, or upload an MP3/AAC version supported by your browser. Drive download quotas and organization sharing policies can also block playback. No sign-in is requested.</p></details>
+<details><summary>Setup & playback help</summary><p>Set GOOGLE_API_KEY and GOOGLE_FOLDER_ID in Netlify environment variables, enable the Google Drive API, and share the folder and songs publicly. See README.md for setup instructions.</p><p>Playback uses the documented Drive API media endpoint. If a song fails, open its Drive link, check public sharing and download permission, or upload an MP3/AAC version supported by your browser. Drive download quotas and organization sharing policies can also block playback. No sign-in is requested.</p></details>
 </main><footer>Folder Radio · Audio travels directly from Google Drive to your browser.</footer>
 </div>
 <script>
 'use strict';
-// ==================== ENTER YOUR CONFIGURATION HERE ====================
-const CONFIG = Object.freeze({
-  API_KEY: 'AIzaSyBLg_IojNv-RYq5nmvM-vWb0iQ03MTY3Bg',
-  FOLDER_ID: '1rd9jJyiZ6osPetTwSij87Tqifj67j5W8'
-});
-// ======================================================================
 const $ = id => document.getElementById(id);
 const audio = $('audio');
 const state = { files: [], token: '', busy: false, ready: false, queue: [], position: -1, shuffle: false, repeat: 'off', history: [], generation: 0, failed: false };
@@ -53,19 +47,21 @@ const isAudio = file => (file.mimeType || '').startsWith('audio/') || (!((file.m
 function size(bytes) { if (bytes === undefined) return 'Size unavailable'; const n = Number(bytes); if (!Number.isFinite(n)) return 'Size unavailable'; return n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`; }
 function time(value) { if (!Number.isFinite(value) || value < 0) return '0:00'; return `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`; }
 function status(text, error = false) { $('library-status').textContent = text; $('library-status').classList.toggle('error', error); }
-function apiURL(path, params = {}) { const url = new URL(`https://www.googleapis.com/drive/v3/${path}`); Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v)); return url; }
+function apiURL(path, params = {}) { const url = new URL(`/api/${path}`, window.location.origin); Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v)); return url; }
 function apiError(code, body) {
   const detail = body?.error || {}; const reasons = (detail.errors || []).map(e => e.reason).join(' ') + ' ' + (detail.message || '');
   if (/quota|rateLimit|dailyLimit|downloadQuota/i.test(reasons) || code === 429) return 'Google Drive quota or rate limit reached. Wait and try again, or check your project’s Drive API quotas.';
-  if (/key|referer|referrer|accessNotConfigured|SERVICE_DISABLED|API_KEY/i.test(reasons)) return 'API key rejected. Check the key, enable Google Drive API, and allow this website’s exact domain in the key restrictions.';
+  if (/key|referer|referrer|accessNotConfigured|SERVICE_DISABLED|API_KEY/i.test(reasons)) return 'API key rejected. Check the key, enable Google Drive API, and check the server key restrictions.';
   if (code === 404) return 'Folder or file not found, deleted, or not publicly accessible. Check its ID and “Anyone with the link” sharing.';
+  if (/no longer in the configured folder/i.test(reasons)) return 'This song is no longer in the configured folder or its folder membership could not be verified.';
+  if (code === 500 && /configuration/i.test(reasons)) return 'Server configuration is missing or invalid. Set GOOGLE_API_KEY and GOOGLE_FOLDER_ID in Netlify, then redeploy.';
   if (code === 401 || code === 403) return 'Access denied. Check public sharing and download permission, API key restrictions, and organization sharing policies.';
   if (code === 400) return 'Invalid Drive request. Check that FOLDER_ID is a folder ID, not a full URL, and refresh the library.';
   return `Google Drive request failed (${code}). Try again later.`;
 }
 async function request(path, params) {
   let response;
-  try { response = await fetch(apiURL(path, params), { headers: { 'X-Goog-Api-Key': CONFIG.API_KEY }, credentials: 'omit', signal: AbortSignal.timeout(20000) }); }
+  try { response = await fetch(apiURL(path, params), { credentials: 'omit', signal: AbortSignal.timeout(20000) }); }
   catch { throw new Error('Could not reach Google Drive. Check your connection, browser network restrictions, and try again.'); }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(apiError(response.status, body));
@@ -94,15 +90,14 @@ function renderQueue() {
 }
 async function loadLibrary(reset = false) {
   if (state.busy) return;
-  if (!CONFIG.API_KEY || CONFIG.API_KEY.startsWith('PASTE_') || !/^[\w-]+$/.test(CONFIG.FOLDER_ID) || CONFIG.FOLDER_ID.startsWith('PASTE_')) { status('Setup needed: enter your API_KEY and public FOLDER_ID in the marked configuration block in index.html.',true); return; }
   state.busy = true; $('reload').disabled = true; $('more').disabled = true; $('songs').setAttribute('aria-busy','true'); status('Loading your folder…');
   try {
     if (reset || !state.ready) {
-        const folder = await request(`files/${encodeURIComponent(CONFIG.FOLDER_ID)}`, { fields:'id,name,mimeType,trashed', supportsAllDrives:'true' });
+      const folder = await request('folder', { fields:'id,name,mimeType,trashed', supportsAllDrives:'true' });
       if (folder.trashed || folder.mimeType !== 'application/vnd.google-apps.folder') throw new Error('FOLDER_ID must point to an existing, publicly shared folder.');
       state.files = []; state.token = ''; state.ready = true; $('library-title').textContent = folder.name;
     }
-    const params = { q:`'${CONFIG.FOLDER_ID}' in parents and trashed = false`, fields:'nextPageToken,files(id,name,mimeType,size,resourceKey)', pageSize:'100', orderBy:'name', spaces:'drive', supportsAllDrives:'true', includeItemsFromAllDrives:'true' };
+    const params = { fields:'nextPageToken,files(id,name,mimeType,size,resourceKey)', pageSize:'100', orderBy:'name', spaces:'drive', supportsAllDrives:'true', includeItemsFromAllDrives:'true' };
     if (state.token) params.pageToken = state.token;
     const page = await request('files',params);
     const seen = new Set(state.files.map(f => f.id)); state.files.push(...(page.files || []).filter(f => isAudio(f) && !seen.has(f.id)));
@@ -124,12 +119,8 @@ async function select(index, remember = true) {
     const metadata = await request(`files/${encodeURIComponent(file.id)}`, { fields:'id,parents,trashed,resourceKey,capabilities(canDownload)', supportsAllDrives:'true', ...(file.resourceKey ? { resourceKey:file.resourceKey } : {}) });
     if (generation !== state.generation) return;
     if (metadata.trashed) throw new Error('This song was moved to the trash. Restore it in Google Drive, then refresh the library.');
-    // Drive can omit `parents` from files.get even when files.list returned this
-    // item for the configured folder, so only reject an explicit parent mismatch.
-    if (Array.isArray(metadata.parents) && metadata.parents.length && !metadata.parents.includes(CONFIG.FOLDER_ID)) throw new Error('This song is no longer in the configured folder. Refresh the library.');
     if (metadata.capabilities?.canDownload === false) throw new Error('The owner has disabled downloads. Ask the owner to allow downloading this public audio file.');
-    // Native audio cannot set a request header; the documented key query parameter is used here.
-    const mediaParams = { alt:'media', key:CONFIG.API_KEY };
+    const mediaParams = { alt:'media' };
     if (metadata.resourceKey || file.resourceKey) mediaParams.resourceKey = metadata.resourceKey || file.resourceKey;
     audio.src = apiURL(`files/${encodeURIComponent(file.id)}`, mediaParams).href;
     await resume();
@@ -144,7 +135,7 @@ async function playbackFailure() {
   try {
     const probeParams = { alt:'media' };
     if (file.resourceKey) probeParams.resourceKey = file.resourceKey;
-    const response = await fetch(apiURL(`files/${encodeURIComponent(file.id)}`,probeParams), { headers:{'X-Goog-Api-Key':CONFIG.API_KEY, Range:'bytes=0-0'}, credentials:'omit', signal:AbortSignal.timeout(10000) });
+    const response = await fetch(apiURL(`files/${encodeURIComponent(file.id)}`,probeParams), { headers:{Range:'bytes=0-0'}, credentials:'omit', signal:AbortSignal.timeout(10000) });
     if (!response.ok) message = apiError(response.status,await response.json().catch(() => ({})));
     else if (response.body) await response.body.cancel();
   } catch { /* Keep the actionable native playback error above. */ }
