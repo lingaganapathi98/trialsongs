@@ -1,38 +1,20 @@
 # Folder Radio
 
-A responsive, dependency-free music player. Deploy `index.html` on any static HTTPS host. No build step, server, Google sign-in, or OAuth is required.
+A music player for a publicly shared Google Drive folder, hosted on Netlify. A Netlify Edge Function reads the configuration on the server and proxies Drive requests; the API key and folder ID are not included in the published page.
 
-## Setup
+## Netlify setup
 
-1. In [Google Cloud Console](https://console.cloud.google.com/), select or create a project. Open **APIs & Services → Library**, find **Google Drive API**, and enable it.
-2. Open **APIs & Services → Credentials → Create credentials → API key**. Edit the key: under **Application restrictions**, select **Websites (HTTP referrers)** and allow your website, for example `https://music.example.com/*`. Add each actual origin you use, including `https://www.example.com/*` if applicable. Under **API restrictions**, choose **Restrict key → Google Drive API**. Save. Restrictions can take a few minutes to apply.
-3. Share the music folder as **Anyone with the link → Viewer**. Verify each song is also accessible without signing in and that downloading is allowed. Organization policies may prevent public sharing. This player does not bypass these policies.
-4. Copy the folder ID from `https://drive.google.com/drive/folders/FOLDER_ID`. Use only the ID, not the URL. Nested folders and shortcuts are not followed. Link shares requiring additional resource keys may not work with this simple ID-only setup; use a public folder/files accessible with their IDs.
-5. In `index.html`, find **ENTER YOUR CONFIGURATION HERE** at the top of the script and replace exactly these values:
+1. Enable the Google Drive API in Google Cloud and create an API key restricted to that API. Website referrer restrictions are not suitable for the server-side key; check Google Cloud's options for restricting server-side keys. Share the folder and audio files publicly with downloads enabled.
+2. In Netlify, add `GOOGLE_API_KEY` and `GOOGLE_FOLDER_ID` under project environment variables. Use the folder ID from its Drive URL. If scopes are available, include **Functions**. Set values for each deploy context you use.
+3. Deploy the repository with the included `netlify.toml`. The build copies the page into `dist`, and the Edge Function handles `/api/*`. Redeploy after changing environment variables. Do not put secrets into `netlify.toml`, the HTML, or a committed `.env` file.
+4. For local development, use `netlify dev` with the Netlify CLI and set the environment variables in your shell or local `.env` file. The sample `.env.example` lists the variable names.
 
-   ```js
-   const CONFIG = Object.freeze({
-     API_KEY: 'YOUR_ACTUAL_API_KEY',
-     FOLDER_ID: 'YOUR_ACTUAL_PUBLIC_FOLDER_ID'
-   });
-   ```
+The folder and songs still need to be publicly accessible. Visitors can see song metadata and file IDs, and can use your public endpoint; use suitable access controls, quota monitoring, and rate limits if needed. The Edge Function validates folder membership before streaming and forwards byte range requests for seeking. Hosting and Drive usage limits apply.
 
-6. Upload `index.html` to your static website and open its HTTPS URL. For local development, serve it over HTTP (for example `npx http-server . -p 8080`) and add `http://localhost:8080/*` as a temporary allowed referrer. Opening `file://` directly will not work reliably with website key restrictions. Avoid a `no-referrer` site policy; Google needs the origin to validate referrer restrictions.
+If a key was previously exposed or committed, rotate or delete it in Google Cloud. Removing it from the current page does not revoke it or erase repository history.
 
 ## Use
 
-- Click a song to start a queue from the currently searched and sorted list. **+** appends a song (duplicates allowed); **×** removes queued entries other than the current one. Search/sort do not change an existing queue. Refresh updates the library; an existing queue stays available and each file’s folder membership is checked before playback.
-- **Load more** requests the next batch of up to 100 folder entries. Non-audio entries are filtered out. Search and sorting apply to loaded audio; load additional pages to include more songs. Empty batches can still have another page.
-- Previous restarts after three seconds; otherwise it returns through playback history. Next advances in queue order, or chooses another random song with shuffle enabled. Repeat cycles **off → all → one**; repeat one applies when a song ends. Shuffle can revisit songs. All controls work with Tab and Enter/Space; sliders support arrow keys. Some mobile browsers require device buttons for volume.
+Search or sort loaded songs, click a song to play, and use **+** to add songs to the queue. **Load more** fetches additional batches. Playback supports shuffle, repeat and seeking when the browser and Drive support it. Public sharing, download permissions, Drive quotas, network conditions and browser codec support affect playback.
 
-## Requests and limitations
-
-Folder validation uses `GET /drive/v3/files/FOLDER_ID`. Listing always includes `q="'FOLDER_ID' in parents and trashed = false"` and uses `nextPageToken`; it never lists the whole Drive. MIME types beginning `audio/` qualify, with common audio filename extensions as a fallback. Workspace documents and shortcuts are excluded. Sizes are shown when Google supplies them.
-
-Playback uses native `<audio>` with the documented `GET https://www.googleapis.com/drive/v3/files/FILE_ID?alt=media&key=API_KEY` endpoint. Metadata and error diagnostic requests send the key in `X-Goog-Api-Key`; native audio requires the query parameter because it cannot attach that header. The browser may buffer/cache audio normally, but the application never uploads, proxies, or persists songs or Google credentials. The browser API key is visible to visitors: restrict it to this site and the Drive API, and monitor quotas. Use a standard API key, not a service-account credential.
-
-Public listing does not guarantee playback: individual file sharing, download restrictions, quotas, file changes, network conditions, and browser codec/range support can interfere. An error displays next steps and a normal Drive **view** link; there are no undocumented download URLs. MP3 or AAC/M4A are useful browser-compatible choices. Seek and duration become available after usable metadata arrives; a server/browser that cannot seek may limit scrubbing. The player stops on errors instead of skipping them silently. It does not automatically retry quota failures.
-
-No live API key or folder is bundled. You must configure and test with your public files; availability and codecs depend on Google and the browser.
-
-Official references: [public-folder search](https://developers.google.com/workspace/drive/api/guides/search-files), [files.list and pagination](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list), [documented media downloads](https://developers.google.com/workspace/drive/api/guides/manage-downloads), [API key restrictions](https://cloud.google.com/api-keys/docs/add-restrictions-api-keys).
+Run client checks with `node test.cjs` and Edge Function checks with `node test-edge.cjs`.
