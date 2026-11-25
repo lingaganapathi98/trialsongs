@@ -1,8 +1,7 @@
-﻿[[build]]
+[build]
   command = "node build.cjs"
   publish = "dist"
 
 [[edge_functions]]
   path = "/api/*"
   function = "drive"
-
