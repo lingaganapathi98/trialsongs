@@ -25,7 +25,25 @@
       if (!meta.ok) upstream = meta;
       else {
         const data = await meta.json();
-        if (data.trashed || !Array.isArray(data.parents) || !data.parents.includes(folder)) return error(403, 'This song is no longer in the configured folder.');
+        if (data.trashed) return error(403, 'This song is no longer in the configured folder.');
+        if (Array.isArray(data.parents) && data.parents.length) {
+          if (!data.parents.includes(folder)) return error(403, 'This song is no longer in the configured folder.');
+        } else {
+          // Public file metadata can omit parents. Verify against the folder's listing instead.
+          let pageToken;
+          let found = false;
+          let incomplete = false;
+          do {
+            const listing = await drive('files', {q:`'${folder}' in parents and trashed = false`, fields:'nextPageToken,incompleteSearch,files(id)', pageSize:'1000', spaces:'drive', supportsAllDrives:'true', includeItemsFromAllDrives:'true', pageToken});
+            if (!listing.ok) return error(502, 'Unable to verify the song in the configured folder.');
+            const page = await listing.json();
+            found = Array.isArray(page.files) && page.files.some(file => file.id === id);
+            incomplete ||= page.incompleteSearch === true;
+            pageToken = page.nextPageToken;
+          } while (!found && pageToken);
+          if (!found && incomplete) return error(502, 'Unable to verify the song in the configured folder.');
+          if (!found) return error(403, 'This song is no longer in the configured folder.');
+        }
         if (url.searchParams.get('alt') === 'media') upstream = await drive(`files/${id}`, {alt:'media', resourceKey}, request.headers.get('range'));
         else { delete data.parents; return Response.json(data, {headers:{'Cache-Control':'no-store'}}); }
       }
