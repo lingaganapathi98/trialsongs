@@ -53,8 +53,8 @@ function apiError(code, body) {
   if (/quota|rateLimit|dailyLimit|downloadQuota/i.test(reasons) || code === 429) return 'Google Drive quota or rate limit reached. Wait and try again, or check your project’s Drive API quotas.';
   if (/key|referer|referrer|accessNotConfigured|SERVICE_DISABLED|API_KEY/i.test(reasons)) return 'API key rejected. Check the key, enable Google Drive API, and check the server key restrictions.';
   if (code === 404) return 'Folder or file not found, deleted, or not publicly accessible. Check its ID and “Anyone with the link” sharing.';
-  if (/no longer in the configured folder/i.test(reasons)) return 'This song is no longer in the configured folder or its folder membership could not be verified.';
-  if (code === 500 && /configuration/i.test(reasons)) return 'Server configuration is missing or invalid. Set GOOGLE_API_KEY and GOOGLE_FOLDER_ID in Netlify, then redeploy.';
+  if (/no longer in the configured folder/i.test(reasons)) return 'This song is no longer in the configured folder. Refresh the library.';
+  if (/Unable to verify the song in the configured folder/i.test(reasons)) return 'Could not verify the song in the configured folder. Please try again.';  if (code === 500 && /configuration/i.test(reasons)) return 'Server configuration is missing or invalid. Set GOOGLE_API_KEY and GOOGLE_FOLDER_ID in Netlify, then redeploy.';
   if (code === 401 || code === 403) return 'Access denied. Check public sharing and download permission, API key restrictions, and organization sharing policies.';
   if (code === 400) return 'Invalid Drive request. Check that FOLDER_ID is a folder ID, not a full URL, and refresh the library.';
   return `Google Drive request failed (${code}). Try again later.`;
